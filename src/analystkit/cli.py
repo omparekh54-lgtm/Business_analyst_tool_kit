@@ -5,6 +5,8 @@ from pathlib import Path
 
 from .profile import profile
 from .workbook import inspect
+from .prep import prepare
+from .audit import audit
 
 
 def main() -> None:
@@ -17,6 +19,15 @@ def main() -> None:
     run.add_argument("--sheet")
     run.add_argument("--header-row", type=int)
     run.add_argument("--output", default="profile.html")
+    clean = sub.add_parser("prepare", help="Combine and clean files with source and change logs")
+    clean.add_argument("files", nargs="+")
+    clean.add_argument("--date", action="append", default=[])
+    clean.add_argument("--amount", action="append", default=[])
+    clean.add_argument("--duplicate-key", action="append", default=[])
+    clean.add_argument("--output", default="prepared.xlsx")
+    check = sub.add_parser("audit", help="Audit a workbook for cell and formula issues")
+    check.add_argument("file")
+    check.add_argument("--output", default="audit.xlsx")
     sub.add_parser("app", help="Open the local upload interface")
     args = parser.parse_args()
     if args.command == "app":
@@ -33,6 +44,14 @@ def main() -> None:
             print(f"{candidate.sheet}: header row {candidate.header_row}; {len(candidate.columns)} columns; score {candidate.score:.1f}")
         for warning in result.warnings:
             print(f"Review: {warning}")
+    elif args.command == "prepare":
+        result = prepare(args.files, date_columns=args.date, amount_columns=args.amount, dedupe_keys=args.duplicate_key)
+        print(f"Saved {result.save(args.output)}")
+        for warning in result.warnings:
+            print(f"Review: {warning}")
+    elif args.command == "audit":
+        result = audit(args.file)
+        print(f"Saved {result.save(args.output)} with {len(result.findings)} findings")
     else:
         report = profile(args.file, sheet=args.sheet, header_row=args.header_row)
         print(f"Saved {report.save(args.output)}")

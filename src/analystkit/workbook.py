@@ -56,6 +56,8 @@ def _candidate(rows: list[tuple[object, ...]], sheet: str, row_index: int, max_r
     text_count = sum(isinstance(v, str) and bool(v.strip()) for v in cells)
     if text_count < 2 or text_count / len(used) < 0.75:
         return None
+    if any(re.fullmatch(r"(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}/\d{1,2}/\d{2,4})", str(v).strip()) for v in cells if v is not None):
+        return None
     data_like = sum(bool(re.fullmatch(r"[-+]?\d+(?:[.,]\d+)*|\d{4}-\d{1,2}-\d{1,2}", str(v).strip())) for v in cells if v is not None)
     if data_like >= 2 and data_like / len(used) >= .5:
         return None
