@@ -16,6 +16,7 @@ class TableCandidate:
     data_rows: int
     score: float
     warnings: tuple[str, ...] = ()
+    start_column: int = 1  # Excel's one-based column number
 
 
 @dataclass
@@ -66,7 +67,7 @@ def _candidate(rows: list[tuple[object, ...]], sheet: str, row_index: int, max_r
         warnings.append(f"The table starts in column {start + 1}.")
     score = len(used) * 2 + populated * 2 - (row_index * .3) - (len(cells) - len(used))
     # Count actual rows when loading; this conservative estimate is only for inspection.
-    return TableCandidate(sheet, row_index + 1, headers, max(0, max_row - row_index - 1), score, tuple(warnings))
+    return TableCandidate(sheet, row_index + 1, headers, max(0, max_row - row_index - 1), score, tuple(warnings), start + 1)
 
 
 def inspect(path: str | Path) -> WorkbookInspection:
@@ -111,14 +112,12 @@ def read_table(path: str | Path, candidate: TableCandidate) -> pd.DataFrame:
         frame = pd.read_csv(path, **kwargs)
     else:
         frame = pd.read_excel(path, sheet_name=candidate.sheet, engine="openpyxl", **kwargs)
-    frame = frame.dropna(how="all").dropna(axis=1, how="all")
-    # A table may start after blank columns. Match the detected header span.
-    if len(frame.columns) != len(candidate.columns):
-        raw = pd.read_csv(path, **kwargs) if path.suffix.lower() == ".csv" else pd.read_excel(path, sheet_name=candidate.sheet, engine="openpyxl", **kwargs)
-        nonempty = [i for i in raw.columns if raw[i].notna().any()]
-        if len(nonempty) != len(candidate.columns):
-            raise ValueError("The table width changed after the header. Select or clean the table manually.")
-        frame = raw[nonempty].dropna(how="all")
+    # Keep fully blank columns with headers: they are important quality findings.
+    start = candidate.start_column - 1
+    end = start + len(candidate.columns)
+    if frame.shape[1] < end:
+        frame = frame.reindex(columns=range(end))
+    frame = frame.iloc[:, start:end].dropna(how="all")
     frame.columns = candidate.columns
     frame.insert(0, "_source_row", frame.index + candidate.header_row + 1)
     return frame.reset_index(drop=True)

@@ -15,7 +15,7 @@ def make_book(path: Path) -> None:
     orders = book.create_sheet("Orders")
     orders.append(["Confidential sales export"])
     orders.append([])
-    orders.append([None, "Invoice Dt", "Client Code", "Net Value", "Invoice No"])
+    orders.append([None, "Invoice Dt", "Client Code", "Net Value", "Invoice No", "Analyst Comment"])
     orders.append([None, "2026-08-01", "A", 100, "I-1"])
     orders.append([None, "2026-08-02", "B", 150, "I-2"])
     orders.append([None, "2026-08-03", "A", None, "I-3"])
@@ -32,6 +32,7 @@ def test_shifted_header_and_source_evidence(tmp_path):
     assert report.row_count == 3
     assert report.source_rows["_source_row"].tolist() == [4, 5, 6]
     assert any("Net Value: 1 blank" in finding for finding in report.findings)
+    assert any("Analyst Comment: 3 blank" in finding for finding in report.findings)
     assert next(s for s in report.suggestions if s.field == "date").column == "Invoice Dt"
     assert next(s for s in report.suggestions if s.field == "amount").column == "Net Value"
     assert report.save(tmp_path / "report.html").exists()
