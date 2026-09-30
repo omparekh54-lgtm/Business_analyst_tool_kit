@@ -71,7 +71,12 @@ def _candidate(rows: list[tuple[object, ...]], sheet: str, row_index: int, max_r
         warnings.append("Repeated column names were numbered; confirm the intended fields.")
     if start:
         warnings.append(f"The table starts in column {start + 1}.")
-    score = len(used) * 2 + populated * 2 - (row_index * .3) - (len(cells) - len(used))
+    header_words = {"id", "date", "time", "amount", "value", "sales", "price", "cost", "quantity",
+                    "customer", "client", "invoice", "order", "product", "region", "category",
+                    "status", "stage", "activity", "group", "outcome", "requirement", "design",
+                    "test", "acceptance", "owner", "name"}
+    semantic = sum(bool(set(re.findall(r"[a-z]+", str(value).casefold())) & header_words) for value in cells)
+    score = len(used) * 2 + populated * 2 + semantic * 3 - (row_index * .3) - (len(cells) - len(used))
     # Count actual rows when loading; this conservative estimate is only for inspection.
     return TableCandidate(sheet, row_index + 1, headers, max(0, max_row - row_index - 1), score, tuple(warnings), start + 1)
 

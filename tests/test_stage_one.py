@@ -66,3 +66,16 @@ def test_ambiguous_slash_date_is_kept_for_review(tmp_path):
     assert result.data.loc[0, "_original_Date"] == "03/04/2026"
     assert result.data.loc[1, "Date"].day == 15
     assert any("day/month or month/day" in message for message in result.warnings)
+
+
+def test_prepare_aligns_equivalent_columns_in_different_files(tmp_path):
+    first = tmp_path / "first.csv"
+    second = tmp_path / "second.csv"
+    first.write_text("Order ID,Net Value\nA,10\n")
+    second.write_text("Invoice No,Sales Amount\nB,20\n")
+    result = prepare([first, second], per_file_rename={"second.csv": {
+        "Invoice No": "Order ID", "Sales Amount": "Net Value"}},
+        amount_columns=["Net Value"])
+    assert result.data["Net Value"].tolist() == [10.0, 20.0]
+    assert "Invoice No" not in result.data
+    assert any(result.changes["action"] == "align column names")

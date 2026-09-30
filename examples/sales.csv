@@ -1,0 +1,25 @@
+Invoice ID,Invoice Date,Customer ID,Product,Region,Net Sales
+I001,2024-01-12,C1,Candle,West,100
+I002,2024-02-10,C2,Perfume,East,120
+I003,2024-03-11,C1,Candle,West,130
+I004,2024-04-08,C3,Perfume,North,140
+I005,2024-05-09,C2,Candle,East,150
+I006,2024-06-14,C4,Perfume,West,160
+I007,2024-07-10,C1,Candle,West,170
+I008,2024-08-12,C3,Perfume,North,180
+I009,2024-09-03,C4,Candle,West,190
+I010,2024-10-19,C2,Perfume,East,200
+I011,2024-11-12,C5,Candle,East,210
+I012,2024-12-06,C1,Perfume,West,220
+I013,2025-01-10,C2,Candle,East,110
+I014,2025-02-08,C3,Perfume,North,130
+I015,2025-03-16,C1,Candle,West,140
+I016,2025-04-15,C4,Perfume,West,150
+I017,2025-05-12,C2,Candle,East,160
+I018,2025-06-18,C5,Perfume,East,170
+I019,2025-07-12,C1,Candle,West,180
+I020,2025-08-22,C3,Perfume,North,190
+I021,2025-09-04,C4,Candle,West,200
+I022,2025-10-15,C2,Perfume,East,210
+I023,2025-11-16,C5,Candle,East,220
+I024,2025-12-20,C1,Perfume,West,230

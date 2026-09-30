@@ -82,16 +82,30 @@ elif task == "Prepare data":
                     paths = [local_file(u, directory) for u in uploads]
                     chosen = [choose_table(path, f"prep_{path.name}") for path in paths]
                     if all(chosen):
-                        columns = sorted(set().union(*(set(item.columns) for item in chosen)))
+                        mapping = {}
+                        if len(paths) > 1:
+                            with st.expander("Align differently named columns", expanded=False):
+                                st.caption("Give equivalent columns the same name, such as Invoice Date and Bill Date → Date.")
+                                for path, item in zip(paths, chosen):
+                                    changes = {}
+                                    st.write(path.name)
+                                    for original in item.columns:
+                                        updated = st.text_input(f"{path.name}: {original}", value=original,
+                                                                key=f"align_{path.name}_{original}")
+                                        if updated.strip() != original:
+                                            changes[original] = updated.strip()
+                                    mapping[path.name] = changes
+                        columns = sorted(set().union(*(set(mapping.get(path.name, {}).get(c, c) for c in item.columns)
+                                                       for path, item in zip(paths, chosen))))
                         dates = st.multiselect("Date columns to standardize", columns)
                         amounts = st.multiselect("Amount columns to standardize", columns)
                         keys = st.multiselect("Columns identifying possible duplicates (optional)", columns)
-                        st.caption("Files with different column names can be aligned using the Python rename map; the report flags unmatched columns.")
-                        settings = ([(item.sheet, item.header_row) for item in chosen], dates, amounts, keys)
+                        settings = ([(item.sheet, item.header_row) for item in chosen], dates, amounts, keys, mapping)
                         fingerprint = sha256(b"".join(u.getvalue() + u.name.encode() for u in uploads) + str(settings).encode()).hexdigest()
                         if st.button("Prepare and preview", type="primary"):
                             selections = {path.name: (item.sheet, item.header_row) for path, item in zip(paths, chosen)}
-                            result = prepare(paths, tables=selections, date_columns=dates, amount_columns=amounts, dedupe_keys=keys)
+                            result = prepare(paths, tables=selections, date_columns=dates, amount_columns=amounts,
+                                             dedupe_keys=keys, per_file_rename=mapping)
                             st.subheader("Changes made")
                             st.dataframe(result.changes, hide_index=True)
                             for warning in result.warnings:

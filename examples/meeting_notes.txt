@@ -1,0 +1,5 @@
+Decision: Show monthly sales by region.
+Requirement: Each report must display the date range and metric definition.
+Acceptance: The date range is visible above the chart.
+Action: Send the sample sales file; owner: Analyst
+Question: Should refunds reduce net sales?

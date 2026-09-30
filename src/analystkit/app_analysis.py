@@ -1,5 +1,6 @@
 """Upload forms for the twelve analysis and reporting functions."""
 
+from dataclasses import asdict
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from . import (AnalysisResult, cohorts, experiment, forecast, funnel, insight_report,
-               meeting_assistant, pricing, process_bottlenecks, reconcile, run_saved,
+               meeting_assistant, MetricCatalog, pricing, process_bottlenecks, reconcile, run_saved,
                save_setup, traceability, variance)
 from .results import table
 from .workbook import inspect, read_table
@@ -222,18 +223,37 @@ def render(label: str) -> None:
                         "design": _select(data, "Design link (optional)", optional=True),
                         "test": _select(data, "Test link (optional)", optional=True),
                         "acceptance": _select(data, "Acceptance link (optional)", optional=True)}
+            metric_reference = None
+            if task in {"reconcile", "variance", "cohorts", "pricing", "experiment", "forecast"}:
+                catalog_file = st.file_uploader("Approved metric dictionary (optional)", type=["json"], key=f"{task}_metrics")
+                if catalog_file:
+                    local_catalog = Path(directory) / "catalog.json"
+                    local_catalog.write_bytes(catalog_file.getvalue())
+                    approved = [item for item in MetricCatalog.load(local_catalog).definitions if item.status == "approved"]
+                    if approved:
+                        chosen_metric = st.selectbox("Reference an approved metric", [None] + approved,
+                                                     format_func=lambda item: "No metric reference" if item is None else f"{item.name} (v{item.version})")
+                        if chosen_metric:
+                            metric_reference = asdict(chosen_metric)
+                            st.info(f"Definition: {chosen_metric.description}. Calculation: {chosen_metric.calculation}. Confirm your chosen columns match it.")
+                    else:
+                        st.warning("This dictionary contains no approved definitions.")
+            fingerprint = sha256(b"".join(u.getvalue() for u in uploads) + str((args, metric_reference)).encode()).hexdigest()
             if st.button("Run analysis", type="primary"):
                 runner = {"reconcile": reconcile, "variance": variance, "funnel": funnel, "cohorts": cohorts,
                           "process_bottlenecks": process_bottlenecks, "pricing": pricing,
                           "experiment": experiment, "forecast": forecast, "traceability": traceability}[task]
                 result = runner(*frames, **args)
-                fingerprint = sha256(b"".join(u.getvalue() for u in uploads) + str(args).encode()).hexdigest()
+                if metric_reference:
+                    result.definitions["metric_reference"] = metric_reference
+                    result.warnings.append("Metric definition is a reference; confirm selected columns implement its documented calculation.")
                 st.session_state[f"{task}_result"] = (fingerprint, result)
                 with tempfile.TemporaryDirectory() as setup_dir:
-                    setup = save_setup(Path(setup_dir) / "setup.json", task=task, sample_files=frames, parameters=args)
+                    setup = save_setup(Path(setup_dir) / "setup.json", task=task, sample_files=frames,
+                                       parameters=args, metric_reference=metric_reference)
                     st.session_state[f"{task}_setup"] = (fingerprint, setup.read_bytes())
             saved = st.session_state.get(f"{task}_result")
-            if saved and saved[0] == sha256(b"".join(u.getvalue() for u in uploads) + str(args).encode()).hexdigest():
+            if saved and saved[0] == fingerprint:
                 _show_result(saved[1], saved[0], prefix=task)
                 st.download_button("Save this setup for next time", st.session_state[f"{task}_setup"][1],
                                    "setup.json", mime="application/json", key=f"setup_download_{task}")

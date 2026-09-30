@@ -28,7 +28,8 @@ FIELDS = {
 
 
 def save_setup(path: str | Path, *, task: str, sample_files: list[str | Path],
-               parameters: dict, column_maps: list[dict[str, str]] | None = None) -> Path:
+               parameters: dict, column_maps: list[dict[str, str]] | None = None,
+               metric_reference: dict | None = None) -> Path:
     """Validate a run and store confirmed settings for later files."""
     if task not in TASKS:
         raise ValueError(f"Unknown repeatable analysis: {task}")
@@ -51,7 +52,8 @@ def save_setup(path: str | Path, *, task: str, sample_files: list[str | Path],
             raise ValueError(f"Required fields missing: {', '.join(sorted(missing))}")
     TASKS[task](*frames, **parameters)  # A saved profile must work with its sample.
     config = {"format_version": 1, "task": task, "parameters": parameters,
-              "column_maps": mappings, "required_fields": required}
+              "column_maps": mappings, "required_fields": required,
+              "metric_reference": metric_reference}
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2), encoding="utf-8")
@@ -77,6 +79,9 @@ def run_saved(setup: str | Path, files: list[str | Path],
         if missing:
             raise ValueError(f"Critical columns changed: {', '.join(sorted(missing))}. Review the mapping before running.")
     current = TASKS[config["task"]](*frames, **config["parameters"])
+    if config.get("metric_reference"):
+        current.definitions["metric_reference"] = config["metric_reference"]
+        current.warnings.append("Metric definition is a reference; confirm selected columns implement its documented calculation.")
     if previous is None:
         return current
     prior = json.loads(Path(previous).read_text(encoding="utf-8"))

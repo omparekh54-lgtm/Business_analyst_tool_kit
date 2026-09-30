@@ -113,8 +113,10 @@ def test_recurring_setup_detects_schema_change_and_differences(tmp_path):
     params = {"date": "Date", "amount": "Sales", "segment": "Region",
               "start_a": "2026-01-01", "end_a": "2026-01-31",
               "start_b": "2026-02-01", "end_b": "2026-02-28"}
-    setup = save_setup(tmp_path / "setup.json", task="variance", sample_files=[initial], parameters=params)
+    setup = save_setup(tmp_path / "setup.json", task="variance", sample_files=[initial], parameters=params,
+                       metric_reference={"key": "net_sales", "version": 1, "calculation": "approved by Finance"})
     old = run_saved(setup, [initial])
+    assert old.definitions["metric_reference"]["key"] == "net_sales"
     old.save(tmp_path / "previous.json")
     updated = run_saved(setup, [next_file], previous=tmp_path / "previous.json")
     assert "Changes since last run" in updated.tables

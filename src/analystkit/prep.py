@@ -44,7 +44,8 @@ def _amount(value: object) -> float | None:
 
 def prepare(paths: list[str | Path], *, tables: dict[str, tuple[str, int]] | None = None,
             rename: dict[str, str] | None = None, date_columns: list[str] | None = None,
-            amount_columns: list[str] | None = None, dedupe_keys: list[str] | None = None) -> PrepResult:
+            amount_columns: list[str] | None = None, dedupe_keys: list[str] | None = None,
+            per_file_rename: dict[str, dict[str, str]] | None = None) -> PrepResult:
     """Combine and clean selected tables; never delete duplicate or unparseable rows.
 
     `tables` maps each filename to (sheet, one-based header row). When more than one
@@ -65,7 +66,11 @@ def prepare(paths: list[str | Path], *, tables: dict[str, tuple[str, int]] | Non
             raise ValueError(f"Choose a sheet and header row for {source.name}")
         chosen = choices[0]
         frame = read_table(source, chosen)
-        frame = frame.rename(columns=rename or {})
+        mapping = {**(rename or {}), **(per_file_rename or {}).get(source.name, {})}
+        unknown = set(mapping) - set(frame)
+        if unknown:
+            raise ValueError(f"{source.name}: columns to rename were not found: {', '.join(sorted(unknown))}")
+        frame = frame.rename(columns=mapping)
         if frame.columns.duplicated().any():
             raise ValueError(f"Column mapping creates duplicate names in {source.name}")
         frame.insert(0, "_source_sheet", chosen.sheet)
@@ -74,6 +79,9 @@ def prepare(paths: list[str | Path], *, tables: dict[str, tuple[str, int]] | Non
         warnings.extend(f"{source.name}: {w}" for w in view.warnings + list(chosen.warnings))
         log.append({"source_file": source.name, "action": "import", "column": "", "affected_rows": len(frame),
                     "details": f"{chosen.sheet}, header row {chosen.header_row}"})
+        if mapping:
+            log.append({"source_file": source.name, "action": "align column names", "column": ", ".join(mapping),
+                        "affected_rows": len(frame), "details": str(mapping)})
     if len(paths) > 1 and len({Path(p).name for p in paths}) != len(paths):
         raise ValueError("Input filenames must be distinct to preserve source references")
     column_sets = [set(f.columns) - {"_source_file", "_source_sheet", "_source_row"} for f in frames]

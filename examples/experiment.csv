@@ -1,0 +1,9 @@
+Group,Bought,Spend
+control,0,0
+control,1,100
+control,0,0
+control,1,120
+treatment,1,120
+treatment,1,110
+treatment,0,0
+treatment,1,130

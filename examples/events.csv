@@ -1,0 +1,9 @@
+Case ID,Stage,Event Time
+L1,Lead,2026-01-01
+L1,Quote,2026-01-02
+L1,Order,2026-01-05
+L2,Lead,2026-01-01
+L2,Quote,2026-01-03
+L3,Lead,2026-01-02
+L3,Quote,2026-01-04
+L3,Order,2026-01-07
