@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "business-analyst-tool-kit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first, explainable analysis of business spreadsheets"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-dependencies = ["pandas>=2.1,<3", "openpyxl>=3.1,<4"]
+dependencies = ["pandas>=2.1,<3", "openpyxl>=3.1,<4", "numpy>=1.26,<3", "scipy>=1.11,<2"]
 
 [project.optional-dependencies]
 app = ["streamlit>=1.35,<2"]

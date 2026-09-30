@@ -7,11 +7,12 @@ import tempfile
 import streamlit as st
 
 from analystkit import MetricCatalog, audit, inspect, prepare, profile
+from analystkit.app_analysis import FUNCTIONS, render
 
 st.set_page_config(page_title="AnalystKit", page_icon="📊", layout="wide")
 st.title("Business Analyst Tool Kit")
 st.caption("Analyse files locally. No account or API key required.")
-task = st.selectbox("What do you want to do?", ["Explore data", "Prepare data", "Audit workbook", "Define a metric"])
+task = st.selectbox("What do you want to do?", ["Explore data", "Prepare data", "Audit workbook", "Define a metric"] + list(FUNCTIONS))
 
 
 def local_file(upload, directory):
@@ -120,7 +121,7 @@ elif task == "Audit workbook":
             except (ValueError, OSError) as error:
                 st.error(str(error))
 
-else:
+elif task == "Define a metric":
     st.write("Record a metric's meaning, source, calculation, and owner. Drafts do not replace approved definitions.")
     uploaded = st.file_uploader("Existing metrics.json (optional)", type=["json"], key="metrics_upload")
     with tempfile.TemporaryDirectory() as directory:
@@ -157,3 +158,6 @@ else:
                 st.download_button("Download metrics.json", workspace[1], "metrics.json", mime="application/json")
         except (ValueError, OSError, TypeError, KeyError) as error:
             st.error(str(error))
+
+else:
+    render(task)
