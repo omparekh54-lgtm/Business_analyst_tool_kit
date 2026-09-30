@@ -47,6 +47,15 @@ def test_ambiguous_amount_requires_confirmation():
     assert amount.alternatives
 
 
+def test_csv_with_title_row_and_shifted_header(tmp_path):
+    path = tmp_path / "sales.csv"
+    path.write_text("Monthly sales export\nDate,Order ID,Amount\n2026-08-01,A,10\n2026-08-02,B,20\n", encoding="utf-8")
+    result = profile(path)
+    assert result.header_row == 2
+    assert result.row_count == 2
+    assert result.source_rows["_source_row"].tolist() == [3, 4]
+
+
 def test_unsupported_input(tmp_path):
     path = tmp_path / "old.xls"
     path.write_bytes(b"not an Excel file")

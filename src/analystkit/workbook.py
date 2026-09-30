@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import csv
 import re
 
 import pandas as pd
@@ -55,6 +56,9 @@ def _candidate(rows: list[tuple[object, ...]], sheet: str, row_index: int, max_r
     text_count = sum(isinstance(v, str) and bool(v.strip()) for v in cells)
     if text_count < 2 or text_count / len(used) < 0.75:
         return None
+    data_like = sum(bool(re.fullmatch(r"[-+]?\d+(?:[.,]\d+)*|\d{4}-\d{1,2}-\d{1,2}", str(v).strip())) for v in cells if v is not None)
+    if data_like >= 2 and data_like / len(used) >= .5:
+        return None
     following = rows[row_index + 1:row_index + 6]
     populated = sum(any(v is not None for v in r[start:end]) for r in following)
     if populated == 0:
@@ -77,10 +81,16 @@ def inspect(path: str | Path) -> WorkbookInspection:
         raise FileNotFoundError(path)
     result = WorkbookInspection(path)
     if path.suffix.lower() == ".csv":
-        preview = pd.read_csv(path, nrows=8, header=None, dtype=object).where(pd.notna, None)
-        rows = list(preview.itertuples(index=False, name=None))
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.reader(handle)
+            rows = []
+            count = 0
+            for record in reader:
+                count += 1
+                if count <= 12:
+                    rows.append(tuple(value if value.strip() else None for value in record))
         for i in range(min(5, len(rows))):
-            candidate = _candidate(rows, path.stem, i, sum(1 for _ in open(path, encoding="utf-8-sig")))
+            candidate = _candidate(rows, path.stem, i, count)
             if candidate:
                 result.candidates.append(candidate)
     elif path.suffix.lower() in {".xlsx", ".xlsm"}:
@@ -109,7 +119,7 @@ def read_table(path: str | Path, candidate: TableCandidate) -> pd.DataFrame:
     path = Path(path)
     kwargs = dict(header=None, skiprows=candidate.header_row)
     if path.suffix.lower() == ".csv":
-        frame = pd.read_csv(path, **kwargs)
+        frame = pd.read_csv(path, encoding="utf-8-sig", **kwargs)
     else:
         frame = pd.read_excel(path, sheet_name=candidate.sheet, engine="openpyxl", **kwargs)
     # Keep fully blank columns with headers: they are important quality findings.
